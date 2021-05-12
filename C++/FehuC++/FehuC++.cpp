@@ -20,8 +20,10 @@ PROCESSENTRY32 processInfo;
 std::string targetProcessName = "explorer.exe";
 std::int32_t targetProcessPID = -1;
 boolean ERROR_404 = false;
-//const char* pathDLL = "C:\\Users\eyver\Documents\gitHub_R\rootkit_basics\Release\FehuDLL.dll";
-const char* pathDLL = "C:\\Users\\eyver\\Documents\\gitHub_R\\rootkit_basics\\Debug\\FehuDLL.dll";
+const char* pathDLL = "C:\\Users\\eyver\\Documents\\gitHub_R\\rootkit_basics\\Release\\FehuDLL.dll";
+//const char* pathDLL = "C:\\Users\\eyver\\Documents\\gitHub_R\\rootkit_basics\\Debug\\FehuDLL.dll";
+typedef bool (*testFunction)();
+testFunction dllFunction;
 
 int loadDLL() {
     cout << "Loading DLL ..." << "\n";
@@ -39,7 +41,7 @@ int loadDLL() {
     }
 
     remoteString = VirtualAllocEx(process,NULL,strlen(pathDLL),MEM_COMMIT | MEM_RESERVE,PAGE_READWRITE);
-    cout << "find : " << pathDLL;
+    cout << "find : " << pathDLL << "\n";
 
     if (remoteString != 0) {
         WriteProcessMemory(process,remoteString,pathDLL,strlen(pathDLL),NULL);
@@ -54,8 +56,21 @@ int loadDLL() {
     CreateRemoteThread(process,NULL,NULL,tmp,remoteString,NULL,NULL);
 
     CloseHandle(process);
+
+    HINSTANCE hDll = LoadLibraryA(pathDLL);
+    bool bandera = false;
+    string response = "";
+    if (hDll) {
+        dllFunction = (testFunction)GetProcAddress(hDll, "example");
+        bandera = dllFunction();
+        if (bandera == 1) {
+            response = "true :D";
+        } else {
+            response = "false D:";
+        }
+    }
     
-    cout << "DLL load succesfully !!" << "\n";
+    cout << "DLL load succesfully !!" << response << "\n";
     return 0;
 }
 
