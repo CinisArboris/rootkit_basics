@@ -11,6 +11,7 @@
 
 using namespace std;
 
+int NOT_EXIST = -1;
 HANDLE process;
 LPVOID remoteString;
 LPVOID loadLibrary = NULL;
@@ -27,9 +28,10 @@ testFunction dllFunction;
 
 int loadDLL() {
     cout << "Loading DLL ..." << "\n";
-    process = OpenProcess(PROCESS_ALL_ACCESS,false,targetProcessPID);
 
+    process = OpenProcess(PROCESS_ALL_ACCESS,false,targetProcessPID);
     HMODULE paramA = GetModuleHandle(L"kernel32.dll");
+
     if (paramA != 0) {
         const char* paramB = "LoadLibraryA";
         LPVOID paramC = GetProcAddress(paramA, paramB);
@@ -54,23 +56,22 @@ int loadDLL() {
 
     LPTHREAD_START_ROUTINE tmp = (LPTHREAD_START_ROUTINE)loadLibrary;
     CreateRemoteThread(process,NULL,NULL,tmp,remoteString,NULL,NULL);
-
     CloseHandle(process);
-
     HINSTANCE hDll = LoadLibraryA(pathDLL);
     bool bandera = false;
     string response = "";
+
     if (hDll) {
         dllFunction = (testFunction)GetProcAddress(hDll, "example");
         bandera = dllFunction();
         if (bandera == 1) {
-            response = "true :D";
+            response = "DLL >> true :D";
         } else {
-            response = "false D:";
+            response = "DLL >> false D:";
         }
     }
-    
-    cout << "DLL load succesfully !!" << response << "\n";
+
+    cout << response << "\n";
     return 0;
 }
 
@@ -79,33 +80,29 @@ int findProcess() {
     while (Process32Next(handle, &processInfo) && flag) {
         std::wstring ws(processInfo.szExeFile);
         std::string str(ws.begin(), ws.end());
-        //std::cout << str << "|" << processInfo.th32ProcessID << "\n";
         if (str == targetProcessName) {
             targetProcessPID = processInfo.th32ProcessID;
             flag = false;
         }
     }
+
     CloseHandle(handle);
-    if (targetProcessPID == -1) {
-        std::cout << "PID NOT FOUND";
+    if (targetProcessPID == NOT_EXIST) {
         return -1;
     }
     return targetProcessPID;
 }
 
 boolean badResources() {
-    if (handle == 0) {
-        std::cout << "ERROR SNAPSHOOT" << "\n";
-        return true;
-    } else if (handle == INVALID_HANDLE_VALUE) {
-        std::cout << "ERROR SNAPSHOOT" << "\n";
+    if (handle == 0 || handle == INVALID_HANDLE_VALUE) {
+        std::cout << "ERROR_SNAPPROCESS" << "\n";
         CloseHandle(handle);
         return true;
     }
 
     processInfo.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(handle, &processInfo)) {
-        std::cout << "ERROR FIRST_PROCESS" << "\n";
+        std::cout << "ERROR_FIRST_PROCESS" << "\n";
         CloseHandle(handle);
         return true;
     }
@@ -116,13 +113,17 @@ boolean badResources() {
 int main() {
     if (badResources())
         return 0;
+
     targetProcessPID = findProcess();
-    if (targetProcessPID == -1) {
+    if (targetProcessPID == NOT_EXIST) {
+        cout << "PID ::" << "NOT_EXIST" << "\n";
         return 0;
     } else {
         cout << "PID ::" << targetProcessPID << "\n";
+        loadDLL();
+        cout << "DLL load succesfully !!" << "\n";
+        return 0;
     }
-    loadDLL();
 }
 
 /*
